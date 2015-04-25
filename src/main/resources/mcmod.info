@@ -1,0 +1,16 @@
+[
+{
+  "modid": "cola",
+  "name": "Cola",
+  "description": "SUPER!",
+  "version": "${version}",
+  "mcversion": "${mcversion}",
+  "url": "",
+  "updateUrl": "",
+  "authorList": ["SoniEx2"],
+  "credits": "",
+  "logoFile": "",
+  "screenshots": [],
+  "dependencies": []
+}
+]
