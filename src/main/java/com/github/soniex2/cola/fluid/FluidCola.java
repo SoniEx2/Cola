@@ -8,5 +8,6 @@ import net.minecraftforge.fluids.Fluid;
 public class FluidCola extends Fluid {
     public FluidCola(String fluidName) {
         super(fluidName);
+        this.setViscosity(900);
     }
 }
