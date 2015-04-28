@@ -3,8 +3,10 @@ package com.github.soniex2.cola.tile;
 import cofh.api.energy.EnergyStorage;
 import cofh.api.energy.IEnergyProvider;
 import cofh.api.energy.IEnergyReceiver;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.ChatComponentText;
 import net.minecraftforge.common.util.ForgeDirection;
 import net.minecraftforge.fluids.FluidStack;
 
@@ -19,6 +21,13 @@ public class TileColaEngine extends TileColaBase implements IEnergyProvider {
             return energy + " " + capacity + " " + maxExtract + " " + maxReceive;
         }
     }*/;
+
+    public void print(EntityPlayer p) {
+        String s = "Power: " + storage.getEnergyStored() + "/" + storage.getMaxEnergyStored();
+        p.addChatMessage(new ChatComponentText(s));
+        s = "Cola: " + colaTank.getFluidAmount() + "/" + colaTank.getCapacity();
+        p.addChatMessage(new ChatComponentText(s));
+    }
 
     @Override
     public void updateEntity() {
