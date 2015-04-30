@@ -5,6 +5,9 @@ import cofh.api.energy.IEnergyProvider;
 import cofh.api.energy.IEnergyReceiver;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.network.NetworkManager;
+import net.minecraft.network.Packet;
+import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.ChatComponentText;
 import net.minecraftforge.common.util.ForgeDirection;
@@ -21,6 +24,8 @@ public class TileColaEngine extends TileColaBase implements IEnergyProvider {
             return energy + " " + capacity + " " + maxExtract + " " + maxReceive;
         }
     }*/;
+    public boolean isGenerating = false;
+    public boolean isTankEmpty = true;
 
     public void print(EntityPlayer p) {
         String s = "Power: " + storage.getEnergyStored() + "/" + storage.getMaxEnergyStored();
@@ -34,11 +39,28 @@ public class TileColaEngine extends TileColaBase implements IEnergyProvider {
         super.updateEntity();
         if (worldObj.isRemote) return;
         //System.out.println(storage + " " + (colaTank.getFluid() == null ? "null" : colaTank.getFluid().getFluid().getName()) + " " + colaTank.getFluidAmount() + " " + colaTank.getCapacity());
+        if (isTankEmpty && colaTank.getFluidAmount() > 0) {
+            worldObj.addBlockEvent(this.xCoord, this.yCoord, this.zCoord, this.getBlockType(), 1, 0);
+            this.isTankEmpty = false;
+        } else if (!isTankEmpty && colaTank.getFluidAmount() == 0) {
+            worldObj.addBlockEvent(this.xCoord, this.yCoord, this.zCoord, this.getBlockType(), 1, 1);
+            this.isTankEmpty = true;
+        }
         if (storage.receiveEnergy(10, true) == 10) {
             FluidStack fs = colaTank.drain(1, true);
             if (fs != null && fs.amount == 1) {
                 storage.receiveEnergy(10, false);
+                if (!isGenerating) {
+                    worldObj.addBlockEvent(this.xCoord, this.yCoord, this.zCoord, this.getBlockType(), 0, 1);
+                    this.isGenerating = true;
+                }
+            } else if (isGenerating) {
+                worldObj.addBlockEvent(this.xCoord, this.yCoord, this.zCoord, this.getBlockType(), 0, 0);
+                this.isGenerating = false;
             }
+        } else if (isGenerating) {
+            worldObj.addBlockEvent(this.xCoord, this.yCoord, this.zCoord, this.getBlockType(), 0, 0);
+            this.isGenerating = false;
         }
         for (ForgeDirection dir : ForgeDirection.VALID_DIRECTIONS) {
             TileEntity te = worldObj.getTileEntity(this.xCoord + dir.offsetX, this.yCoord + dir.offsetY, this.zCoord + dir.offsetZ);
@@ -101,5 +123,26 @@ public class TileColaEngine extends TileColaBase implements IEnergyProvider {
     public void writeToNBT(NBTTagCompound tag) {
         super.writeToNBT(tag);
         storage.writeToNBT(tag);
+    }
+
+    @Override
+    public Packet getDescriptionPacket() {
+        NBTTagCompound tag = new NBTTagCompound();
+        tag.setBoolean("isGenerating", isGenerating);
+        tag.setBoolean("isTankEmpty", isTankEmpty);
+        return new S35PacketUpdateTileEntity(this.xCoord, this.yCoord, this.zCoord, 0, tag);
+    }
+
+    @Override
+    public void onDataPacket(NetworkManager net, S35PacketUpdateTileEntity pkt) {
+        super.onDataPacket(net, pkt);
+        NBTTagCompound tag = pkt.func_148857_g();
+
+        if (tag.hasKey("isGenerating")) {
+            this.isGenerating = tag.getBoolean("isGenerating");
+        }
+        if (tag.hasKey("isTankEmpty")) {
+            this.isTankEmpty = tag.getBoolean("isTankEmpty");
+        }
     }
 }
