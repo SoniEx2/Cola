@@ -3,6 +3,7 @@ package com.github.soniex2.cola.tile;
 import cofh.api.energy.EnergyStorage;
 import cofh.api.energy.IEnergyProvider;
 import cofh.api.energy.IEnergyReceiver;
+import com.github.soniex2.cola.Cola;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.network.NetworkManager;
@@ -18,12 +19,14 @@ import net.minecraftforge.fluids.FluidStack;
  */
 public class TileColaEngine extends TileColaBase implements IEnergyProvider {
 
-    private EnergyStorage storage = new EnergyStorage(80000, 10, 1000) /*{
-        @Override
-        public String toString() {
-            return energy + " " + capacity + " " + maxExtract + " " + maxReceive;
-        }
-    }*/;
+    private static final int GEN_RATE = 10; // GEN_RATE RF per tick
+    private static final int PULSE_RATE = 20; // PULSE_RATE ticks per pulse
+    private static final int MAX_DRAIN_RATE = GEN_RATE * PULSE_RATE; // MAX_DRAIN_RATE RF per tick
+
+    private static final int CONSUME_RATE = 1; // CONSUME_RATE millibuckets per tick
+
+    private EnergyStorage storage = new EnergyStorage(80000, GEN_RATE, MAX_DRAIN_RATE);
+
     public boolean isGenerating = false;
     public boolean isTankEmpty = true;
 
@@ -38,7 +41,6 @@ public class TileColaEngine extends TileColaBase implements IEnergyProvider {
     public void updateEntity() {
         super.updateEntity();
         if (worldObj.isRemote) return;
-        //System.out.println(storage + " " + (colaTank.getFluid() == null ? "null" : colaTank.getFluid().getFluid().getName()) + " " + colaTank.getFluidAmount() + " " + colaTank.getCapacity());
         if (isTankEmpty && colaTank.getFluidAmount() > 0) {
             worldObj.addBlockEvent(this.xCoord, this.yCoord, this.zCoord, this.getBlockType(), 1, 0);
             this.isTankEmpty = false;
@@ -46,10 +48,10 @@ public class TileColaEngine extends TileColaBase implements IEnergyProvider {
             worldObj.addBlockEvent(this.xCoord, this.yCoord, this.zCoord, this.getBlockType(), 1, 1);
             this.isTankEmpty = true;
         }
-        if (storage.receiveEnergy(10, true) == 10) {
-            FluidStack fs = colaTank.drain(1, true);
-            if (fs != null && fs.amount == 1) {
-                storage.receiveEnergy(10, false);
+        if (storage.receiveEnergy(GEN_RATE, true) == GEN_RATE) {
+            FluidStack fs = colaTank.drain(CONSUME_RATE, true);
+            if (fs != null && fs.amount == CONSUME_RATE) {
+                storage.receiveEnergy(GEN_RATE, false);
                 if (!isGenerating) {
                     worldObj.addBlockEvent(this.xCoord, this.yCoord, this.zCoord, this.getBlockType(), 0, 1);
                     this.isGenerating = true;
@@ -62,10 +64,12 @@ public class TileColaEngine extends TileColaBase implements IEnergyProvider {
             worldObj.addBlockEvent(this.xCoord, this.yCoord, this.zCoord, this.getBlockType(), 0, 0);
             this.isGenerating = false;
         }
+
         for (ForgeDirection dir : ForgeDirection.VALID_DIRECTIONS) {
+            if (Cola.usePulsedRF && storage.getEnergyStored() < GEN_RATE * PULSE_RATE) break;
             TileEntity te = worldObj.getTileEntity(this.xCoord + dir.offsetX, this.yCoord + dir.offsetY, this.zCoord + dir.offsetZ);
             if (te instanceof IEnergyReceiver) {
-                storage.extractEnergy(((IEnergyReceiver) te).receiveEnergy(dir.getOpposite(), storage.extractEnergy(10, true), false), false);
+                storage.extractEnergy(((IEnergyReceiver) te).receiveEnergy(dir.getOpposite(), storage.extractEnergy(MAX_DRAIN_RATE, true), false), false);
             }
         }
     }

@@ -10,6 +10,8 @@ import cpw.mods.fml.common.event.FMLPreInitializationEvent;
  */
 @Mod(modid = "cola", name = "Cola", version = "1.0.0")
 public class Cola {
+    public static boolean usePulsedRF = true;
+
     @Mod.EventHandler
     public void preInit(FMLPreInitializationEvent event) {
         ColaFluids.init();

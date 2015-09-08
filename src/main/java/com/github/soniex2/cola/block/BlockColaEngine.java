@@ -38,11 +38,10 @@ public class BlockColaEngine extends BlockColaMachine {
     @Override
     public boolean onBlockActivated(World w, int x, int y, int z, EntityPlayer p, int m, float hx, float hy, float hz) {
         if (p.getHeldItem() != null) return false;
-        if (!w.isRemote) {
-            TileEntity te = w.getTileEntity(x, y, z);
-            if (te instanceof TileColaEngine) {
-                ((TileColaEngine) te).print(p);
-            }
+        if (w.isRemote) return true;
+        TileEntity te = w.getTileEntity(x, y, z);
+        if (te instanceof TileColaEngine) {
+            ((TileColaEngine) te).print(p);
         }
         return true;
     }
